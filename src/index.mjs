@@ -21,6 +21,8 @@ const DASHBOARD_CHART = 'clustercost/clustercost-dashboard';
 const DASHBOARD_SERVICE = 'clustercost-dashboard';
 const DASHBOARD_TARGET_PORT = 9090;
 const DASHBOARD_LOCAL_PORT = 3000;
+const AGENT_SERVICE_HOST = `${AGENT_RELEASE}-${AGENT_CHART.split('/')[1]}`;
+const AGENT_SERVICE_PORT = 8080;
 
 let installState = {
   agent: null,
@@ -462,6 +464,27 @@ function findReleaseInfo(releases, releaseName) {
   };
 }
 
+function buildAgentBaseUrl(namespace) {
+  return `http://${AGENT_SERVICE_HOST}.${namespace}.svc.cluster.local:${AGENT_SERVICE_PORT}`;
+}
+
+export function buildDashboardHelmArgs(namespace) {
+  const args = [
+    'upgrade',
+    '--install',
+    DASHBOARD_RELEASE,
+    DASHBOARD_CHART,
+    '-n',
+    namespace,
+  ];
+
+  if (namespace !== DEFAULT_NAMESPACE) {
+    args.push('--set-string', `agents[0].baseUrl=${buildAgentBaseUrl(namespace)}`);
+  }
+
+  return args;
+}
+
 function showClusterCostOverview() {
   console.log(chalk.bold('\n• What is ClusterCost?'));
   console.log(
@@ -609,15 +632,7 @@ async function deployAgent(namespace) {
 async function deployDashboard(namespace) {
   await runStep(
     'Deploying ClusterCost dashboard',
-    async () =>
-      runShellCommand('helm', [
-        'upgrade',
-        '--install',
-        DASHBOARD_RELEASE,
-        DASHBOARD_CHART,
-        '-n',
-        namespace,
-      ]),
+    async () => runShellCommand('helm', buildDashboardHelmArgs(namespace)),
     'ClusterCost dashboard deployed'
   );
 }

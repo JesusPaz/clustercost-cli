@@ -3,6 +3,7 @@ import {
   validateNamespace,
   validateServiceName,
   validatePort,
+  buildDashboardHelmArgs,
 } from '../index.mjs';
 
 describe('input validators', () => {
@@ -27,5 +28,21 @@ describe('input validators', () => {
     expect(validatePort('abc')).toBe('Enter a valid TCP port (1-65535).');
     expect(validatePort(' 8080 ')).toBeUndefined();
     expect(validatePort('-1')).toBe('Enter a valid TCP port (1-65535).');
+  });
+});
+
+describe('dashboard Helm args', () => {
+  it('keeps defaults when namespace is clustercost', () => {
+    const args = buildDashboardHelmArgs('clustercost');
+    expect(args).not.toContain('--set-string');
+  });
+
+  it('overrides agent base URL when namespace changes', () => {
+    const namespace = 'team-a';
+    const args = buildDashboardHelmArgs(namespace);
+    expect(args).toContain('--set-string');
+    expect(args).toContain(
+      'agents[0].baseUrl=http://clustercost-agent-clustercost-agent-k8s.team-a.svc.cluster.local:8080'
+    );
   });
 });
